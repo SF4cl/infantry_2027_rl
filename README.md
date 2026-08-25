@@ -172,3 +172,53 @@ checkpoint 续训 `Infantry-2027-Terrain-v1`。两阶段 Actor 都是 125 维、
 Critic 都是 145 维，完整设计、奖励对齐、中立摆角标定、正/倒车地形
 约束、验证结果和命令统一记录在
 [V1_FLAT_TO_TERRAIN_PLAN.md](V1_FLAT_TO_TERRAIN_PLAN.md)。
+
+## 服务器一键平地从零训练
+
+服务器工作副本位于 `/root/gpufree-data/rl/infantry_2027_rl`。同步到最新、确认
+`git status --short` 为空并安装 editable package 后，在服务器执行：
+
+```bash
+cd /root/gpufree-data/rl/infantry_2027_rl/isaaclab_ext
+bash -n scripts/automation/start_flat_scratch_server.sh
+bash scripts/automation/start_flat_scratch_server.sh
+```
+
+脚本固定从随机网络权重启动正式 `Infantry-2027-Flat-Compatible-v1`：4096 环境、
+总计 2000 updates。它会拒绝脏工作树和重复训练进程，检查不可变资产与运行时版本，
+再用 `nohup` 启动训练并记录 PID、commit、run 目录、stdout 和 stderr。脚本返回后可
+直接退出 SSH，训练不会停止。该入口只训练平地，不会自动进入地形；平地结束并分析
+通过后再显式启动地形阶段。
+
+只读查看状态：
+
+```bash
+cd /root/gpufree-data/rl/infantry_2027_rl/isaaclab_ext
+bash scripts/automation/status_flat_server.sh
+```
+
+持续查看日志：
+
+```bash
+SESSION=$(cat logs/automation/flat_scratch_v1/current_session.txt)
+tail -f "$SESSION/train_stdout.log"
+```
+
+本地代码提交后同时推送 GitHub 和服务器 bare remote：
+
+```powershell
+cd D:\rm\2026_code\rl\infantry_2027_rl
+git push origin main
+git push server main
+```
+
+随后服务器工作副本更新：
+
+```bash
+cd /root/gpufree-data/rl/infantry_2027_rl
+git pull --ff-only
+python -m pip install -e isaaclab_ext/source/infantry_2027
+```
+
+训练运行期间不更新服务器工作副本。需要改训练代码时，先让当前训练结束或显式停止，
+本地提交并同步后再启动新的正式 run。
