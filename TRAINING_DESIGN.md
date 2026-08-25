@@ -43,22 +43,6 @@ Fudan 的 base-height 数值不能照搬。新资产髋关节原点相对 base_l
 
 高度命令与 Fudan 一样在每次 5 s 重采样时瞬时跳变，不施加目标变化率。为了让一次从零训练覆盖完整行程，15% 高度样本直接取当前课程范围的上下端点，其余保持均匀采样。
 
-## 已完成验证
-
-- 资产快照与源目录：333 文件、848256141 bytes，关键 SHA256 一致。
-- `infantry_2027_v0` VMC Isaac 全范围：0.16/0.2025/0.245/0.2875/0.33 m，各自摆角一周；最大闭链误差 0.0308 mm、最大力矩 10.13 Nm、无饱和。
-- `infantry_2027_v0` Isaac 动态闭链：300 steps，最大误差 `4.8078e-7 m`。
-- 新训练任务解析：action 6、policy 125、critic 68、estimator target 3。
-- RSL-RL 完整冒烟：采样、PPO、Encoder 监督更新和 checkpoint 链路均执行成功。
-- direct yaw-rate、原地转向和瞬时高度边界采样修改后，使用 64 环境完成 1 次 PPO 更新（3072 samples）；PPO、Critic 与 Encoder 损失均有限，`non_finite=0`。新 checkpoint 的键盘 Play GUI 持续运行超过 50 s，无自动退出。
-- 最终配置前台验收：先训练 1 update，再从 `model_1.pt` 续训到总计 2 updates；终端正确报告 `remaining updates: 1` 并生成 `model_2.pt`。两次共 6144 samples，PPO/Encoder loss 全部有限。此前验收发现的默认在线地板依赖和 startup DR 缓存时序均已修复后重测。
-- checkpoint 同时保存 policy、PPO optimizer、Encoder optimizer、schema 与明确的 `completed_iterations`，可按总更新数续训。
-- 并行吞吐：64/128/256/512/1024/2048 环境约为 184/269/429/869/1378/2114 steps/s；2048 为本机正式配置。
-
-## 长训练启动门槛
-
-短测中必须满足：无 non-finite，Encoder loss 有限，episode length 不持续下降，orientation/collision/acceleration 项不出现异常突变。短测 checkpoint 仅用于诊断，正式 `long_v1_direct_yaw` 从随机初始化开始。
-
 ## Terrain-v0 对齐记录
 
 训练地形列严格使用参考最终分布：平地 0.50、正/负平滑坡各 0.10、正/负粗糙坡各 0.05、下/上楼梯各 0.10。单块 8 m×8 m，水平/垂直分辨率 0.1 m/0.005 m，10 行难度严格为 row/10，20 列按上述比例展开，初始最高等级 5。离散障碍、踏石、沟壑和深坑只留在审阅工具中，不参与 Terrain-v0。
@@ -68,9 +52,3 @@ Actor/Encoder 输入契约完全不变，保证部署时不需要地形传感器
 Terrain-v0 从第 0 次更新启用参考的宽域随机化。每个环境在 episode reset 时固定分配为“水平推扰”或“向下冲击”之一，随后每 7 s 施加该类型的扰动；不会在同一 episode 内反复切换扰动类型。碰撞惩罚严格对齐参考最终训练，只统计 `base_link`、`lf_link`、`rf_link`，不把正常接地的轮子与全部连杆误算为碰撞。奖励采用参考最终 terrain 权重与逐项裁剪；执行层仍是闭链 VMC，因此动作维度保持 6。Terrain runner 每 20 次更新保存一次 checkpoint，降低长训练因外部进程或系统资源中断造成的回退量。
 
 训练决策优先级：先从随机初始化做 200 updates 的短测；只要站立、episode length、跟踪奖励和 terrain level 呈可学习趋势，就从零启动正式长训练。仅当短测明确失败时，才增加“只加载平地 actor+Encoder 参数”的可选初始化路径，critic、optimizer 和 iteration 均重新开始。
-
-### 2026-08-24 从零训练门槛结果
-
-最终配置先以 64 环境从随机初始化训练到 200 updates。平均 episode length 从 20–39 轮的 `191` 提升到 80–99 轮的 `1158`，最后 20 轮约为 `1044`；跑满比例由约 `19%` 提升到最后 20 轮的约 `61%`，全程 `non_finite=0`，Encoder loss 保持有限。线速度、高度与转向奖励均已出现明确学习趋势。terrain level 从随机初始约 `2.2` 退回到约 `1.16`，说明 200 轮尚不足以掌握中高难度地形，但不构成“从零学不会”的证据。
-
-因此不采用平地权重初始化。正式 run `2026-08-24_12-33-28_terrain_v0_scratch_long_5000` 使用 1024 环境、5000 updates，从随机网络初始化开始；其 checkpoint 与 200 轮诊断 run 分开保存。

@@ -27,13 +27,8 @@ D:\condaenvs\isaacsim510\python.exe scripts\visualize_fudan_terrains.py
 
 ## Terrain-v0 正式训练
 
-Terrain-v0 的训练集合、奖励、课程、固定地形可视化和续训命令统一记录在上一级 [README.md](../README.md)。2026-08-24 已完成 200 updates 从零门槛测试，并启动 1024 环境、5000 updates 的正式从零训练：
-
-```text
-logs\rsl_rl\infantry_2027_v0_terrain\2026-08-24_12-33-28_terrain_v0_scratch_long_5000
-```
-
-正式 run 不加载 Flat checkpoint，也不加载 200 轮诊断 checkpoint；每 20 轮保存一次，便于安全续训。
+Terrain-v0 的训练集合、奖励、课程、固定地形可视化和续训命令统一记录在上一级 [README.md](../README.md)。
+训练日志、checkpoint 和训练后指标分析作为外部产物管理，不提交到本仓库。
 
 ## Ubuntu 服务器 v1 从零训练
 

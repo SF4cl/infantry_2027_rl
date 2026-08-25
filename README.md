@@ -13,6 +13,13 @@ infantry_2027_rl/
 
 资产快照共 333 个文件、848256141 bytes。训练和 sim2sim 都必须引用这份快照，禁止原地重新转换或修改；若资产发生变化，应建立 `infantry_2027_v1`。
 
+## 仓库边界
+
+本仓库只保留可复现训练、可视化、policy 导出与 sim2sim 所需的代码、配置和接口文档。
+一次性静态审核、TensorBoard/日志解析、参数扫描、绘图工具以及它们生成的
+JSON/CSV/PNG/NPZ 结果不纳入 Git，统一保存在仓库外的本机分析工作区。训练日志、
+checkpoint 和导出模型也不进入 Git，通过服务器与本机之间的产物传输单独管理。
+
 ## 当前训练契约
 
 - 物理：500 Hz（`dt=0.002`），策略 100 Hz（decimation 5），20 s episode。
@@ -130,22 +137,10 @@ D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027
 D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Terrain-v0 --num_envs 1024 --max_iterations 5000 --headless --run_name terrain_v0_scratch_long
 ```
 
-2026-08-24 的最终配置从零短测已通过。200 轮诊断 checkpoint 位于：
-
-```text
-isaaclab_ext\logs\rsl_rl\infantry_2027_v0_terrain\2026-08-24_12-06-55\model_200.pt
-```
-
-当前正式长训练同样从随机初始化启动，不加载平地或短测权重：
-
-```text
-isaaclab_ext\logs\rsl_rl\infantry_2027_v0_terrain\2026-08-24_12-33-28_terrain_v0_scratch_long_5000
-```
-
 Terrain runner 每 20 轮保存一次。若训练中断，按“总目标轮数”续训到 5000：
 
 ```powershell
-D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Terrain-v0 --num_envs 1024 --max_iterations 5000 --headless --resume --load_run 2026-08-24_12-33-28_terrain_v0_scratch_long_5000 --checkpoint model_<最近轮数>.pt --kit_args "--portable-root D:/rm/2026_code/rl/infantry_2027_rl/isaaclab_ext/.tmp/kit_terrain_long_5000_resume"
+D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Terrain-v0 --num_envs 1024 --max_iterations 5000 --headless --resume --load_run <运行目录名> --checkpoint model_<最近轮数>.pt --kit_args "--portable-root D:/rm/2026_code/rl/infantry_2027_rl/isaaclab_ext/.tmp/kit_terrain_resume"
 ```
 
 只有当短测明确表明随机初始化无法先学会站立与低级地形时，才采用平地模型的 actor+Encoder 权重作为初始化；不直接恢复 optimizer、critic 或训练 iteration，避免把平地 value function 和优化器状态带进新的地形分布。
@@ -164,14 +159,13 @@ D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\play.py --task Infantry-2027-
 --kit_args "--portable-root D:/rm/2026_code/rl/infantry_2027_rl/isaaclab_ext/.tmp/kit_portable"
 ```
 
-## 当前 v1 平地到地形路线（2026-08-25）
+## 当前 v1 平地到地形路线
 
 旧 `v0` 任务与 checkpoint 已冻结。新的正式路线使用
 `Infantry-2027-Flat-Compatible-v1` 从零训练 2000 updates，再以完整
 checkpoint 续训 `Infantry-2027-Terrain-v1`。两阶段 Actor 都是 125 维、
-Critic 都是 145 维，完整设计、奖励对齐、中立摆角标定、正/倒车地形
-约束、验证结果和命令统一记录在
-[V1_FLAT_TO_TERRAIN_PLAN.md](V1_FLAT_TO_TERRAIN_PLAN.md)。
+Critic 都是 145 维。可复现的观测、奖励、DR、命令、PPO 和地形配置记录在
+[TRAINING_DESIGN.md](TRAINING_DESIGN.md)；训练后的指标分析与阶段验收记录保存在本机分析工作区。
 
 ## 服务器一键平地从零训练
 

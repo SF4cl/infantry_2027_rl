@@ -19,6 +19,9 @@
 **/__pycache__/
 **/.pytest_cache/
 **/.matplotlib/
+**/analysis/
+**/local_analysis/
+/mujoco_sim2sim/results/
 **/*.pyc
 **/*.pyo
 **/*.egg-info/
