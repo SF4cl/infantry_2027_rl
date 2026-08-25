@@ -1,0 +1,22 @@
+{
+  "scenario": "forward",
+  "target": [
+    0.8,
+    0.0,
+    0.215
+  ],
+  "duration_s": 5.999999999999561,
+  "survived": true,
+  "vx_mean_mps": 0.5310169216474543,
+  "vx_mae_mps": 0.26898307835254587,
+  "yaw_mean_radps": 0.017015219445093994,
+  "yaw_mae_radps": 0.01867117955904769,
+  "height_mean_m": 0.20358900699352894,
+  "tilt_p90_deg": 1.1112348026009027,
+  "max_closure_residual_m": 0.00030845152042308755,
+  "max_leg_effort_nm": 21.188924111250028,
+  "max_wheel_effort_nm": 1.5358888731504576,
+  "checkpoint_iteration": 1600,
+  "checkpoint_sha256": "D9F68B0716D6A945CA060CAD5AA6F913DFACE251A33BD123F94614CD74681D77",
+  "model_sha256": "B82B5DBA77B857DFAD13AEE34F5A97C269138990E55404883E818544B917E618"
+}

@@ -1,0 +1,29 @@
+{
+  "policy": "D:\\rm\\2026_code\\rl\\infantry_2027_rl\\mujoco_sim2sim\\exported\\model_5000.npz",
+  "checkpoint_iteration": 5000,
+  "gains": {
+    "kp_length": 900.0,
+    "kd_length": 20.0,
+    "kp_angle": 50.0,
+    "kd_angle": 3.0
+  },
+  "profile": "stand -> forward -> stop -> forward+turn -> stop -> minimum -> maximum -> nominal height",
+  "survived": true,
+  "duration_s": 19.999999999999794,
+  "vx_mae_mps": 0.19331179380926303,
+  "yaw_mae_radps": 0.02002191845043466,
+  "height_mae_m": 0.015135042976747823,
+  "length_tracking_rmse_m": 0.01893181398041794,
+  "angle_tracking_rmse_rad": 0.05541983382311556,
+  "tilt_p90_deg": 1.1663496969377718,
+  "tilt_max_deg": 1.3489258537313042,
+  "leg_saturation_fraction": 0.0,
+  "peak_inner_leg_effort_nm": 36.92743818903557,
+  "max_closure_residual_m": 0.0004658778744659638,
+  "target_length_min_m": 0.16,
+  "target_length_max_m": 0.33,
+  "target_length_std_m": 0.04343670946871053,
+  "target_length_rate_p95_mps": 0.17463191571186995,
+  "target_length_total_variation_m": 1.0242752389791512,
+  "raw_length_action_std": 2.1034588497735163
+}

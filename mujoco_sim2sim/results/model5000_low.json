@@ -1,0 +1,37 @@
+{
+  "scenario": "stand",
+  "target": [
+    0.0,
+    0.0,
+    0.148
+  ],
+  "duration_s": 7.999999999999341,
+  "survived": true,
+  "vx_mean_mps": -0.1685128718488882,
+  "vx_mae_mps": 0.1685128718488882,
+  "yaw_mean_radps": -0.026148613820829673,
+  "yaw_mae_radps": 0.026148613820829673,
+  "height_mean_m": 0.154235186435197,
+  "tilt_p90_deg": 0.5448234500883016,
+  "max_closure_residual_m": 0.00033579774988897533,
+  "max_leg_effort_nm": 20.700700968991104,
+  "max_wheel_effort_nm": 0.47906794691694277,
+  "vmc_gains": {
+    "kp_length": 900.0,
+    "kd_length": 20.0,
+    "kp_angle": 50.0,
+    "kd_angle": 3.0
+  },
+  "target_length_mean_m": [
+    0.1605055023108665,
+    0.16064426142331928
+  ],
+  "target_length_range_m": [
+    0.16,
+    0.20958959888476617
+  ],
+  "target_length_tracking_rmse_m": 0.012027195679843797,
+  "checkpoint_iteration": 5000,
+  "checkpoint_sha256": "A00F1FE8FEA8965740FDAA9ECDC7BDB4621C6349110B5553078E398A05969E9F",
+  "model_sha256": "B82B5DBA77B857DFAD13AEE34F5A97C269138990E55404883E818544B917E618"
+}

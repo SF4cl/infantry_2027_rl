@@ -1,0 +1,48 @@
+# Immutable simulation assets are transferred separately and verified by hash.
+/assets/
+
+# Training and exported-policy artifacts.
+**/logs/
+**/outputs/
+**/output/
+**/videos/
+**/wandb/
+**/recordings/
+**/exported/
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tfevents.*
+
+# Generated simulation and analysis artifacts.
+**/__pycache__/
+**/.pytest_cache/
+**/.matplotlib/
+**/*.pyc
+**/*.pyo
+**/*.egg-info/
+**/.tmp/
+*.tmp
+*.log
+*.dmp
+
+# Native build products.
+**/build/
+**/cmake-build*/
+**/*.so
+**/*.dll
+
+# Local IDE and OS state.
+.DS_Store
+**/.idea/
+**/.vscode/
+
+# Local credentials and machine-specific configuration.
+.env
+.env.*
+!.env.example
+server.local.ps1
+server.local.sh
+*.pem
+*.key

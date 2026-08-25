@@ -1,0 +1,11 @@
+# infantry_2027_v0 不可变快照
+
+- 来源：`D:\rm\2026_code\rl\wl_2027\assets\infantry_2027_v0`
+- 目标：`D:\rm\2026_code\rl\infantry_2027_rl\assets\infantry_2027_v0`
+- 文件数：333
+- 总字节：848256141
+- USD SHA256：`AA3B46E1672E4CA0E2BEEF823B5BB72D2E62F1AEF2434A98534E78A7842EB200`
+- MJCF SHA256：`B82B5DBA77B857DFAD13AEE34F5A97C269138990E55404883E818544B917E618`
+- asset_spec SHA256：`92B81D13364DCAB539E63457D4C612738F2ED99B76E162F56EA19882E886CE7B`
+
+复制后已逐项比较文件数量、总大小与关键 SHA256。该目录只作为训练和 sim2sim 的共同输入，不允许在原地运行资产生成脚本。所有文件设置为 Windows ReadOnly；下一次资产修订必须使用新版本目录。
