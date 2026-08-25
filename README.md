@@ -186,23 +186,30 @@ bash scripts/automation/start_flat_scratch_server.sh
 
 脚本固定从随机网络权重启动正式 `Infantry-2027-Flat-Compatible-v1`：4096 环境、
 总计 2000 updates。它会拒绝脏工作树和重复训练进程，检查不可变资产与运行时版本，
-再用 `nohup` 启动训练并记录 PID、commit、run 目录、stdout 和 stderr。脚本返回后可
-直接退出 SSH，训练不会停止。该入口只训练平地，不会自动进入地形；平地结束并分析
-通过后再显式启动地形阶段。
+然后在当前终端用 `exec python -u scripts/rsl_rl/train.py ...` 前台启动。所有训练信息
+直接显示在 tmux 窗口中，不使用 `nohup`、输出重定向或后台 PID。该入口只训练平地，
+不会自动进入地形；平地结束并分析通过后再显式启动地形阶段。
 
-只读查看状态：
-
-```bash
-cd /root/gpufree-data/rl/infantry_2027_rl/isaaclab_ext
-bash scripts/automation/status_flat_server.sh
-```
-
-持续查看日志：
+推荐先创建 tmux 会话再运行：
 
 ```bash
-SESSION=$(cat logs/automation/flat_scratch_v1/current_session.txt)
-tail -f "$SESSION/train_stdout.log"
+tmux new -s flat_v1
 ```
+
+在 tmux 中执行上面的启动脚本。训练开始后：
+
+```bash
+# 脱离但不停止训练：先按 Ctrl-b，再按 d
+
+# 重新进入训练终端
+tmux attach -t flat_v1
+
+# 查看所有会话
+tmux ls
+```
+
+在训练终端按 `Ctrl+C` 会走 `train.py` 的安全中断逻辑并保存
+`model_interrupted_<iteration>.pt`；不要用 `kill -9`。
 
 本地代码提交后同时推送 GitHub 和服务器 bare remote：
 

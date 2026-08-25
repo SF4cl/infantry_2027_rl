@@ -35,7 +35,7 @@ logs\rsl_rl\infantry_2027_v0_terrain\2026-08-24_12-33-28_terrain_v0_scratch_long
 
 正式 run 不加载 Flat checkpoint，也不加载 200 轮诊断 checkpoint；每 20 轮保存一次，便于安全续训。
 
-## Ubuntu 服务器迁移与 v1 续训
+## Ubuntu 服务器 v1 从零训练
 
 当前正式 v1 训练环境与服务器镜像版本契约为：
 
@@ -46,48 +46,37 @@ logs\rsl_rl\infantry_2027_v0_terrain\2026-08-24_12-33-28_terrain_v0_scratch_long
 
 建议服务器至少提供 100GB 可用持久化空间。RTX 4090 24GB、12 核 CPU、50GB RAM 足以先保持平地 4096 环境和地形 1024 环境；迁移后先保持环境数不变，以免同时改变硬件和训练 batch 语义。
 
-假设项目传到 `/workspace/infantry_2027_rl`，先安装外部项目并确认任务注册：
+服务器项目位于 `/root/gpufree-data/rl/infantry_2027_rl`。同步 Git 后安装外部项目：
 
 ```bash
-cd /workspace/infantry_2027_rl/isaaclab_ext
-python -m pip install -e source/infantry_2027
-python scripts/list_envs.py
+cd /root/gpufree-data/rl/infantry_2027_rl
+git pull --ff-only
+python -m pip install -e isaaclab_ext/source/infantry_2027
 ```
 
-把完整 `model_850.pt` 及当前 run 的 TensorBoard event 文件复制到服务器。以下命令会从 checkpoint 内记录的 851 个已完成 updates 接着训练，并把 `--max_iterations 2000` 解释为绝对终点，而不是额外再训练 2000 轮：
+正式平地从随机网络权重开始，不加载旧 checkpoint。创建 tmux 会话：
 
 ```bash
-mkdir -p logs/automation/flat_to_terrain_v1
-nohup python scripts/rsl_rl/train.py \
-  --task Infantry-2027-Flat-Compatible-v1 \
-  --num_envs 4096 \
-  --max_iterations 2000 \
-  --headless \
-  --run_name flat_compatible_v1_server_resume851 \
-  --resume_path /workspace/checkpoints/model_850.pt \
-  > logs/automation/flat_to_terrain_v1/flat_server_stdout.log 2>&1 &
-echo $! > logs/automation/flat_to_terrain_v1/flat_server.pid
+tmux new -s flat_v1
 ```
 
-训练创建新 run 目录后，启动跨平台自动验收与地形接力。`<flat-run>` 必须替换为本次服务器续训新建的 run 目录，而不是 Windows 上的原 run：
+在 tmux 中前台执行：
 
 ```bash
-nohup python scripts/automation/flat_to_terrain_monitor.py \
-  --flat-pid "$(cat logs/automation/flat_to_terrain_v1/flat_server.pid)" \
-  --flat-run "<flat-run>" \
-  --project "$PWD" \
-  --python "$(command -v python)" \
-  --flat-iterations 2000 \
-  --terrain-iterations 5000 \
-  --terrain-envs 1024 \
-  --status logs/automation/flat_to_terrain_v1/status.json \
-  > logs/automation/flat_to_terrain_v1/monitor_server_stdout.log 2>&1 &
+cd /root/gpufree-data/rl/infantry_2027_rl/isaaclab_ext
+bash -n scripts/automation/start_flat_scratch_server.sh
+bash scripts/automation/start_flat_scratch_server.sh
 ```
 
-服务器端查看实时进度：
+脚本检查资产、Git 工作树、重复进程和运行时版本，然后使用 `exec` 在当前终端直接运行
+`train.py`。所有训练信息原样显示在 tmux 中；没有 `nohup`、后台 PID、日志重定向或
+自动地形接力。脱离与恢复 tmux：
 
 ```bash
-tail -f logs/automation/flat_to_terrain_v1/flat_server_stdout.log
-watch -n 10 cat logs/automation/flat_to_terrain_v1/status.json
-nvidia-smi
+# 先按 Ctrl-b，再按 d 脱离
+tmux attach -t flat_v1
+tmux ls
 ```
+
+训练完成后先分析平地 `model_2000.pt`，通过后再单独启动 Terrain-v1。训练终端内按
+`Ctrl+C` 会安全保存 `model_interrupted_<iteration>.pt`。
