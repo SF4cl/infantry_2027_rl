@@ -96,3 +96,12 @@ class Infantry2027TerrainV1PPORunnerCfg(Infantry2027FlatCompatiblePPORunnerCfg):
     experiment_name = "infantry_2027_v1_terrain"
     max_iterations = 5000
     save_interval = 20
+
+
+@configclass
+class Infantry2027FlatStablePPORunnerCfg(Infantry2027FlatCompatiblePPORunnerCfg):
+    """Stable five-thousand-update flat precursor for the VMC action contract."""
+
+    experiment_name = "infantry_2027_v2_flat_stable"
+    max_iterations = 5000
+    save_interval = 50

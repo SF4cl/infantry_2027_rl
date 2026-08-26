@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Run the formal Flat-Compatible-v1 training in the foreground. The script is
+# Run the formal Flat-Stable-v2 training in the foreground. The script is
 # intended to be executed inside tmux so train.py retains direct terminal IO.
 # It deliberately starts from random network weights and stops after flat
 # training, leaving terrain training for a separate reviewed stage.
@@ -12,7 +12,7 @@ WORKSPACE_DIR="$(cd -- "${PROJECT_DIR}/.." && pwd)"
 
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python)}"
 NUM_ENVS="${NUM_ENVS:-4096}"
-MAX_ITERATIONS="${MAX_ITERATIONS:-2000}"
+MAX_ITERATIONS="${MAX_ITERATIONS:-5000}"
 ASSET_FILE="${WORKSPACE_DIR}/assets/infantry_2027_v0/isaac/infantry_2027_v0.usdc"
 
 fail() {
@@ -24,9 +24,9 @@ fail() {
 [[ -f "${ASSET_FILE}" ]] || fail "Isaac asset is missing: ${ASSET_FILE}"
 [[ -f "${PROJECT_DIR}/scripts/rsl_rl/train.py" ]] || fail "train.py is missing"
 
-TRAIN_PATTERN='[p]ython.*scripts/rsl_rl/train.py.*Infantry-2027-Flat-Compatible-v1'
+TRAIN_PATTERN='[p]ython.*scripts/rsl_rl/train.py.*Infantry-2027-Flat-Stable-v2'
 if pgrep -f "${TRAIN_PATTERN}" >/dev/null 2>&1; then
-    echo "[ERROR] Another Flat-Compatible-v1 training process is already running:" >&2
+    echo "[ERROR] Another Flat-Stable-v2 training process is already running:" >&2
     pgrep -af "${TRAIN_PATTERN}" >&2 || true
     exit 1
 fi
@@ -38,7 +38,7 @@ fi
 
 GIT_COMMIT="$(git rev-parse HEAD)"
 STAMP="$(date +'%Y-%m-%d_%H-%M-%S')"
-RUN_NAME="flat_compatible_v1_4096x2000_server_scratch_${STAMP}"
+RUN_NAME="flat_stable_v2_${NUM_ENVS}x${MAX_ITERATIONS}_server_scratch_${STAMP}"
 
 echo "[INFO] Project       : ${PROJECT_DIR}"
 echo "[INFO] Asset         : ${ASSET_FILE}"
@@ -52,11 +52,11 @@ echo "[INFO] Run name      : ${RUN_NAME}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 
 echo "[INFO] Starting train.py in the foreground."
-echo "[INFO] Detach tmux with Ctrl-b d; attach with: tmux attach -t flat_v1"
+echo "[INFO] Detach tmux with Ctrl-b d; attach with: tmux attach -t flat_v2"
 
 cd "${PROJECT_DIR}"
 exec "${PYTHON_BIN}" -u scripts/rsl_rl/train.py \
-    --task Infantry-2027-Flat-Compatible-v1 \
+    --task Infantry-2027-Flat-Stable-v2 \
     --num_envs "${NUM_ENVS}" \
     --max_iterations "${MAX_ITERATIONS}" \
     --headless \

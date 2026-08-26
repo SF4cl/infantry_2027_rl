@@ -177,8 +177,10 @@ def _disable_randomization(cfg) -> None:
     cfg.actions.vmc.kp_scale_range = (1.0, 1.0)
     cfg.actions.vmc.kd_scale_range = (1.0, 1.0)
     cfg.actions.vmc.motor_scale_range = (1.0, 1.0)
-    cfg.events.disturbance_type = None
-    cfg.events.interval_disturbance = None
+    if hasattr(cfg.events, "disturbance_type"):
+        cfg.events.disturbance_type = None
+    if hasattr(cfg.events, "interval_disturbance"):
+        cfg.events.interval_disturbance = None
     cfg.events.material.params.update(
         {
             "static_friction_range": (1.0, 1.0),

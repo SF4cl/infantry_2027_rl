@@ -9,7 +9,7 @@
 ```powershell
 cd D:\rm\2026_code\rl\infantry_2027_rl\isaaclab_ext
 D:\condaenvs\isaacsim510\python.exe -m pip install -e source\infantry_2027
-D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Flat-v0 --num_envs 2048 --max_iterations 5000 --headless --run_name long_v0
+D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Flat-Stable-v2 --num_envs 2048 --max_iterations 5000 --headless --run_name flat_stable_v2_local_scratch
 ```
 
 ## Fudan 全地形预览
@@ -30,9 +30,9 @@ D:\condaenvs\isaacsim510\python.exe scripts\visualize_fudan_terrains.py
 Terrain-v0 的训练集合、奖励、课程、固定地形可视化和续训命令统一记录在上一级 [README.md](../README.md)。
 训练日志、checkpoint 和训练后指标分析作为外部产物管理，不提交到本仓库。
 
-## Ubuntu 服务器 v1 从零训练
+## Ubuntu 服务器 v2 从零训练
 
-当前正式 v1 训练环境与服务器镜像版本契约为：
+当前正式 v2 训练环境与服务器镜像版本契约为：
 
 - Isaac Sim `5.1.0`
 - Isaac Lab `v2.3.2`
@@ -52,7 +52,7 @@ python -m pip install -e isaaclab_ext/source/infantry_2027
 正式平地从随机网络权重开始，不加载旧 checkpoint。创建 tmux 会话：
 
 ```bash
-tmux new -s flat_v1
+tmux new -s flat_v2
 ```
 
 在 tmux 中前台执行：
@@ -69,9 +69,9 @@ bash scripts/automation/start_flat_scratch_server.sh
 
 ```bash
 # 先按 Ctrl-b，再按 d 脱离
-tmux attach -t flat_v1
+tmux attach -t flat_v2
 tmux ls
 ```
 
-训练完成后先分析平地 `model_2000.pt`，通过后再单独启动 Terrain-v1。训练终端内按
+训练完成后先分析平地 `model_5000.pt`，通过后再建立并单独启动 Terrain-v2。训练终端内按
 `Ctrl+C` 会安全保存 `model_interrupted_<iteration>.pt`。

@@ -15,7 +15,7 @@ Checkpoints, logs, metric reports, and one-off audit scripts are transferred as 
 - TensorBoard: `2.20.0`
 - NumPy: `1.26.0`
 - Target GPU: one RTX 4090 24GB
-- Formal flat run: `4096` environments and `2000` updates from random network weights.
+- Formal flat run: `Infantry-2027-Flat-Stable-v2`, `4096` environments and `5000` updates from random network weights.
 - Terrain environment count is selected separately after flat-policy review.
 
 ## Required layout

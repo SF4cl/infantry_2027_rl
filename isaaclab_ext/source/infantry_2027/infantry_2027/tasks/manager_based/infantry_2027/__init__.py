@@ -96,3 +96,31 @@ gym.register(
         ),
     },
 )
+
+gym.register(
+    id="Infantry-2027-Flat-Stable-v2",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.infantry_2027_v2_env_cfg:Infantry2027FlatStableEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:Infantry2027FlatStablePPORunnerCfg"
+        ),
+    },
+)
+
+gym.register(
+    id="Infantry-2027-Flat-Stable-Play-v2",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.infantry_2027_v2_env_cfg:Infantry2027FlatStablePlayEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:Infantry2027FlatStablePPORunnerCfg"
+        ),
+    },
+)

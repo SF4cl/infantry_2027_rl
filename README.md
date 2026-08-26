@@ -20,7 +20,7 @@ infantry_2027_rl/
 JSON/CSV/PNG/NPZ 结果不纳入 Git，统一保存在仓库外的本机分析工作区。训练日志、
 checkpoint 和导出模型也不进入 Git，通过服务器与本机之间的产物传输单独管理。
 
-## 当前训练契约
+## 当前正式训练契约（Flat-Stable-v2）
 
 - 物理：500 Hz（`dt=0.002`），策略 100 Hz（decimation 5），20 s episode。
 - 地板由本地 USD 几何直接生成，启动训练不依赖 NVIDIA S3/Nucleus 网络资源。
@@ -31,13 +31,15 @@ checkpoint 和导出模型也不进入 Git，通过服务器与本机之间的�
 - 高度标定：直立时 `base_height ≈ leg_length - 0.012 m`，所以训练高度范围是 `0.148–0.318 m`。
 - 一次长训练内的指令课程：前 1500 个 PPO iteration 将 `vx` 从 `±0.5→±2.3 m/s`、运动 yaw 从 `±1→±4 rad/s`、原地 yaw 从 `±2→±10 rad/s`、腿长从 `0.20–0.26→0.16–0.33 m` 连续扩展；不拆成多套 DR 任务，也不做 checkpoint 阶段迁移。
 - 高度命令每 5 秒瞬时跳变；15% 样本直接取当前课程范围的最低或最高端点，不使用高度变化率限制。
-- DR 从第 0 次更新全部启用：摩擦、恢复系数、base mass/inertia/COM、默认关节位置、VMC Kp/Kd、电机强度和 0–10 ms 动作延迟。
+- DR 从第 0 次更新全部启用，但恢复为已验证平地基线的适中范围：摩擦、恢复系数、base mass/inertia/COM、默认关节位置、VMC Kp/Kd、电机强度和 0–10 ms 动作延迟；平地阶段不施加周期性推扰或向下冲击。
 - Actor 观测：Fudan 的 25 维 proprioception × 5 帧；不输入真实线速度。
 - Encoder：`125 -> [128,64] -> 3`，用真实三维机体线速度乘 Fudan 的 2.0 观测尺度单独监督。
 - Actor/Critic：`[128,64,32]` / `[256,128,64]`。
 - PPO：Fudan 参数（48 steps/env、5 epochs、4 minibatches、lr 1e-3 adaptive、gamma 0.99、lambda 0.95、KL 0.005、entropy 0.01）。
-- privileged observations 删除了平地无信息的 77 维高度扫描，只保留状态与真实 DR 参数。
+- Critic 为后续地形续训预留 77 维高度扫描，总维数 145；Actor、Encoder 和部署输入不读取高度扫描。
 - 奖励只有 Fudan 平地配置中的 16 项；没有旧仓库额外的停止、滑移、饱和、倾角 barrier 或高度一致性奖励。
+
+`Flat-DR-v1` 与其 checkpoint 保留用于复现，不再作为正式训练入口。v2 只回退已经证实影响稳定性的行为塑形：恢复 VMC 基线奖励尺度、适中 DR、5 秒命令重采样，并取消平地周期扰动；最终命令范围、VMC、五帧历史、Encoder 和 145 维 Critic 契约不变。
 
 详细逐项对齐见 [TRAINING_DESIGN.md](TRAINING_DESIGN.md)。
 
@@ -49,19 +51,19 @@ D:\condaenvs\isaacsim510\python.exe -m pip install -e source\infantry_2027
 D:\condaenvs\isaacsim510\python.exe scripts\list_envs.py --keyword Infantry
 ```
 
-## 长训练
+## 当前正式平地长训练
 
 本机 8 GB RTX 4060 实测 2048 环境约 2114 simulation steps/s，优于 1024 环境的 1378 steps/s，且完成了完整 PPO 更新，因此默认使用 2048：
 
 ```powershell
 cd D:\rm\2026_code\rl\infantry_2027_rl\isaaclab_ext
-D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Flat-v0 --num_envs 2048 --max_iterations 5000 --headless --run_name long_v1_direct_yaw
+D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Flat-Stable-v2 --num_envs 2048 --max_iterations 5000 --headless --run_name flat_stable_v2_local_scratch
 ```
 
-训练日志位于 `isaaclab_ext/logs/rsl_rl/infantry_2027_v0_flat/`。查看 TensorBoard：
+训练日志位于 `isaaclab_ext/logs/rsl_rl/infantry_2027_v2_flat_stable/`。查看 TensorBoard：
 
 ```powershell
-D:\condaenvs\isaacsim510\python.exe -m tensorboard.main --logdir D:\rm\2026_code\rl\infantry_2027_rl\isaaclab_ext\logs\rsl_rl\infantry_2027_v0_flat --port 6006
+D:\condaenvs\isaacsim510\python.exe -m tensorboard.main --logdir D:\rm\2026_code\rl\infantry_2027_rl\isaaclab_ext\logs\rsl_rl\infantry_2027_v2_flat_stable --port 6006
 ```
 
 浏览器打开 `http://localhost:6006`。
@@ -69,7 +71,7 @@ D:\condaenvs\isaacsim510\python.exe -m tensorboard.main --logdir D:\rm\2026_code
 按 `Ctrl+C` 会保存 `model_interrupted_<iteration>.pt`。续训到总计 5000 次更新（不会额外再训练 5000 次）：
 
 ```powershell
-D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Flat-v0 --num_envs 2048 --max_iterations 5000 --headless --resume --load_run <运行目录名> --checkpoint <checkpoint文件名>
+D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027-Flat-Stable-v2 --num_envs 2048 --max_iterations 5000 --headless --resume --load_run <运行目录名> --checkpoint <checkpoint文件名>
 ```
 
 项目 checkpoint 额外保存 `completed_iterations` 和 Encoder optimizer 状态；续训按已完成更新数计算，不使用文件名猜测进度。
@@ -78,13 +80,13 @@ D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\train.py --task Infantry-2027
 
 ```powershell
 cd D:\rm\2026_code\rl\infantry_2027_rl\isaaclab_ext
-D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\play.py --task Infantry-2027-Flat-Play-v0 --num_envs 1 --checkpoint <model_xxx.pt> --real-time
+D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\play.py --task Infantry-2027-Flat-Stable-Play-v2 --num_envs 1 --checkpoint <model_xxx.pt> --real-time
 ```
 
 Play 的自动随机指令会立即使用最终训练范围，不会从课程初始范围重新爬升。键盘控制命令：
 
 ```powershell
-D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\play.py --task Infantry-2027-Flat-Play-v0 --num_envs 1 --checkpoint <model_xxx.pt> --real-time --keyboard
+D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\play.py --task Infantry-2027-Flat-Stable-Play-v2 --num_envs 1 --checkpoint <model_xxx.pt> --real-time --keyboard
 ```
 
 点击一次 Isaac Sim 视口后使用：
@@ -159,13 +161,14 @@ D:\condaenvs\isaacsim510\python.exe scripts\rsl_rl\play.py --task Infantry-2027-
 --kit_args "--portable-root D:/rm/2026_code/rl/infantry_2027_rl/isaaclab_ext/.tmp/kit_portable"
 ```
 
-## 当前 v1 平地到地形路线
+## 当前 v2 平地到地形路线
 
-旧 `v0` 任务与 checkpoint 已冻结。新的正式路线使用
-`Infantry-2027-Flat-Compatible-v1` 从零训练 2000 updates，再以完整
-checkpoint 续训 `Infantry-2027-Terrain-v1`。两阶段 Actor 都是 125 维、
-Critic 都是 145 维。可复现的观测、奖励、DR、命令、PPO 和地形配置记录在
-[TRAINING_DESIGN.md](TRAINING_DESIGN.md)；训练后的指标分析与阶段验收记录保存在本机分析工作区。
+旧 `v0`、`v1` 任务与 checkpoint 均保留。新的正式入口是
+`Infantry-2027-Flat-Stable-v2`，从随机网络权重训练 5000 updates。v2 已直接采用
+125 维 Actor、145 维 Critic，因此通过平地验收后可建立同契约 Terrain-v2 并加载完整
+checkpoint；在平地通过前不自动进入地形阶段。可复现的观测、奖励、DR、命令和 PPO
+配置记录在 [TRAINING_DESIGN.md](TRAINING_DESIGN.md)，训练后的指标分析与阶段验收记录
+只保存在仓库外的本机分析工作区。
 
 ## 服务器一键平地从零训练
 
@@ -178,8 +181,8 @@ bash -n scripts/automation/start_flat_scratch_server.sh
 bash scripts/automation/start_flat_scratch_server.sh
 ```
 
-脚本固定从随机网络权重启动正式 `Infantry-2027-Flat-Compatible-v1`：4096 环境、
-总计 2000 updates。它会拒绝脏工作树和重复训练进程，检查不可变资产与运行时版本，
+脚本固定从随机网络权重启动正式 `Infantry-2027-Flat-Stable-v2`：4096 环境、
+总计 5000 updates。它会拒绝脏工作树和重复训练进程，检查不可变资产与运行时版本，
 然后在当前终端用 `exec python -u scripts/rsl_rl/train.py ...` 前台启动。所有训练信息
 直接显示在 tmux 窗口中，不使用 `nohup`、输出重定向或后台 PID。该入口只训练平地，
 不会自动进入地形；平地结束并分析通过后再显式启动地形阶段。
@@ -187,7 +190,7 @@ bash scripts/automation/start_flat_scratch_server.sh
 推荐先创建 tmux 会话再运行：
 
 ```bash
-tmux new -s flat_v1
+tmux new -s flat_v2
 ```
 
 在 tmux 中执行上面的启动脚本。训练开始后：
@@ -196,7 +199,7 @@ tmux new -s flat_v1
 # 脱离但不停止训练：先按 Ctrl-b，再按 d
 
 # 重新进入训练终端
-tmux attach -t flat_v1
+tmux attach -t flat_v2
 
 # 查看所有会话
 tmux ls
