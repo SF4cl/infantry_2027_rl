@@ -157,8 +157,12 @@ class DirectYawVelocityHeightCommand(CommandTerm):
             self._command[:, 1] - self.robot.data.root_ang_vel_b[:, 2]
         ).abs() / steps
         self.metrics["error_base_height"] += (
-            self._command[:, 2] - self.robot.data.root_pos_w[:, 2]
+            self._command[:, 2] - self._measured_base_height()
         ).abs() / steps
+
+    def _measured_base_height(self) -> torch.Tensor:
+        """Return the height quantity represented by the third command."""
+        return self.robot.data.root_pos_w[:, 2]
 
 
 @configclass
@@ -203,13 +207,26 @@ class TerrainTraversalCommand(DirectYawVelocityHeightCommand):
     def __init__(self, cfg, env):
         super().__init__(cfg, env)
         self._terrain_heading = torch.zeros(self.num_envs, device=self.device)
+        self._flat_terrain_types = torch.as_tensor(
+            cfg.flat_terrain_types, device=self.device, dtype=torch.long
+        )
 
     def _nonflat_mask(self, ids: torch.Tensor) -> torch.Tensor:
         terrain = self._env.scene.terrain
         terrain_types = getattr(terrain, "terrain_types", None)
         if terrain_types is None:
             raise RuntimeError("Terrain traversal command requires TerrainImporter.terrain_types.")
-        return terrain_types[ids].to(self.device) != self.cfg.flat_terrain_type
+        selected_types = terrain_types[ids].to(self.device)
+        return ~torch.isin(selected_types, self._flat_terrain_types)
+
+    def _measured_base_height(self) -> torch.Tensor:
+        """Measure clearance over the local yaw-aligned terrain scan."""
+        sensor = self._env.scene.sensors[self.cfg.height_sensor_name]
+        clearance = self.robot.data.root_pos_w[:, 2:3] - sensor.data.ray_hits_w[..., 2]
+        nominal = 0.5 * sum(self.cfg.ranges.base_height)
+        return torch.nan_to_num(
+            clearance, nan=nominal, posinf=nominal, neginf=nominal
+        ).mean(dim=1)
 
     def _resample_command(self, env_ids: Sequence[int]) -> None:
         super()._resample_command(env_ids)
@@ -254,7 +271,11 @@ class TerrainTraversalCommand(DirectYawVelocityHeightCommand):
 @configclass
 class TerrainTraversalCommandCfg(DirectYawVelocityHeightCommandCfg):
     class_type: type = TerrainTraversalCommand
-    flat_terrain_type: int = 0
+    # FUDAN_TERRAINS_CFG allocates ten of its twenty columns to flat terrain.
+    # TerrainImporter.terrain_types stores the column index, not the variant
+    # index, so all ten columns must retain the flat command distribution.
+    flat_terrain_types: tuple[int, ...] = tuple(range(10))
+    height_sensor_name: str = "height_scanner"
     minimum_terrain_speed: float = 0.20
     terrain_heading: float = 0.0
     heading_gain: float = 1.5

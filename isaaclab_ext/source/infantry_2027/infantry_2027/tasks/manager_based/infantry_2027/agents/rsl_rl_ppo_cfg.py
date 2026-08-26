@@ -105,3 +105,12 @@ class Infantry2027FlatStablePPORunnerCfg(Infantry2027FlatCompatiblePPORunnerCfg)
     experiment_name = "infantry_2027_v2_flat_stable"
     max_iterations = 5000
     save_interval = 50
+
+
+@configclass
+class Infantry2027TerrainStablePPORunnerCfg(Infantry2027FlatStablePPORunnerCfg):
+    """Terrain continuation from the accepted Flat-Stable-v2 checkpoint."""
+
+    experiment_name = "infantry_2027_v2_terrain_stable"
+    max_iterations = 5000
+    save_interval = 20

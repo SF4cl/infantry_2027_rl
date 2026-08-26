@@ -124,3 +124,31 @@ gym.register(
         ),
     },
 )
+
+gym.register(
+    id="Infantry-2027-Terrain-Stable-v2",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.infantry_2027_v2_terrain_env_cfg:Infantry2027TerrainStableEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:Infantry2027TerrainStablePPORunnerCfg"
+        ),
+    },
+)
+
+gym.register(
+    id="Infantry-2027-Terrain-Stable-Play-v2",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.infantry_2027_v2_terrain_env_cfg:Infantry2027TerrainStablePlayEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:Infantry2027TerrainStablePPORunnerCfg"
+        ),
+    },
+)
