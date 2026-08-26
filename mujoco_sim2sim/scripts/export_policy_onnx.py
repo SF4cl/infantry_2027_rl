@@ -24,6 +24,8 @@ import torch
 import torch.nn as nn
 from onnx.reference import ReferenceEvaluator
 
+from policy import LEGACY_ACTION_CONTRACT, STABLE_V2_ACTION_CONTRACT
+
 
 CHECKPOINT_SCHEMA = "infantry-2027-v0-fudan-estimator"
 POLICY_CONTRACT = "infantry-2027-v0-flat-25d-v1"
@@ -188,9 +190,18 @@ def export(args: argparse.Namespace) -> None:
     )
 
     checkpoint_hash = sha256(checkpoint_path)
+    if args.action_contract == STABLE_V2_ACTION_CONTRACT:
+        equilibrium_length_nodes = [0.16, 0.22, 0.28, 0.33]
+        equilibrium_angle_nodes = [0.0, 0.0, -0.005, -0.005]
+    else:
+        equilibrium_length_nodes = []
+        equilibrium_angle_nodes = []
     graph = onnx.load(output_path)
     metadata = {
         "policy_contract": POLICY_CONTRACT,
+        "action_contract": args.action_contract,
+        "equilibrium_length_nodes": json.dumps(equilibrium_length_nodes),
+        "equilibrium_angle_nodes": json.dumps(equilibrium_angle_nodes),
         "checkpoint_schema": CHECKPOINT_SCHEMA,
         "checkpoint_sha256": checkpoint_hash,
         "checkpoint_iteration": str(int(checkpoint.get("iter", -1))),
@@ -224,6 +235,7 @@ def export(args: argparse.Namespace) -> None:
     golden_path = output_path.with_suffix(".golden.json")
     golden = {
         "description": "Deterministic cross-runtime golden vector for the ONNX policy.",
+        "action_contract": args.action_contract,
         "input_name": "history",
         "output_names": ["actions", "estimated_base_lin_vel_scaled"],
         "history": golden_history[0].tolist(),
@@ -237,6 +249,9 @@ def export(args: argparse.Namespace) -> None:
     manifest_path = output_path.with_suffix(".onnx.json")
     manifest = {
         "policy_contract": POLICY_CONTRACT,
+        "action_contract": args.action_contract,
+        "equilibrium_length_nodes": equilibrium_length_nodes,
+        "equilibrium_angle_nodes": equilibrium_angle_nodes,
         "checkpoint_schema": CHECKPOINT_SCHEMA,
         "checkpoint": str(checkpoint_path),
         "checkpoint_sha256": checkpoint_hash,
@@ -278,6 +293,12 @@ def main() -> None:
     )
     parser.add_argument("--checkpoint", type=Path, required=True, help="Input RSL-RL model_*.pt")
     parser.add_argument("--output", type=Path, required=True, help="Output .onnx path")
+    parser.add_argument(
+        "--action-contract",
+        choices=(LEGACY_ACTION_CONTRACT, STABLE_V2_ACTION_CONTRACT),
+        default=LEGACY_ACTION_CONTRACT,
+        help="Physical action decoder that the deployment runtime must apply.",
+    )
     parser.add_argument("--opset", type=int, default=17, help="ONNX opset (default: 17)")
     parser.add_argument("--seed", type=int, default=2027, help="Verification random seed")
     parser.add_argument("--atol", type=float, default=2.0e-5)

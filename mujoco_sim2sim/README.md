@@ -22,10 +22,13 @@ checkpoint、导出的 NPZ/ONNX、日志和结果文件均为外部产物，不�
 ```powershell
 D:\condaenvs\isaacsim510\python.exe .\mujoco_sim2sim\scripts\export_policy.py `
   --checkpoint <model_xxx.pt> `
+  --action-contract infantry-2027-flat-stable-v2-vmc-action-v1 `
   --output .\mujoco_sim2sim\exported\<policy_name>.npz
 ```
 
-导出文件包含 checkpoint SHA-256、iteration、schema 和固定输入输出自检向量。
+导出文件包含 checkpoint SHA-256、iteration、schema、固定输入输出自检向量，以及
+Stable-v2 使用的腿长—平衡摆角表。旧 v0 checkpoint 导出时应显式选择
+`--action-contract infantry-2027-v0-vmc-action-v1`。
 
 ## 可视化
 
@@ -48,7 +51,7 @@ D:\rm\2026_code\rl\condaenvs\mujoco\python.exe .\mujoco_sim2sim\scripts\run_poli
 数字小键盘避开 MuJoCo 自带快捷键：
 
 - `Num 8 / Num 2`：按住时给定前进 / 后退，松开归零。
-- `Num 4 / Num 6`：按住累加左 / 右 yaw-rate，松开归零。
+- `Num 4 / Num 6`：按住累加左 / 右 yaw-rate，松开归零；运动时上限 ±4 rad/s，原地时上限 ±10 rad/s。
 - `Num 7 / Num 1`：目标高度瞬时增加 / 减少。
 - `Num 5`：速度和转向归零。
 - `Num 0`：恢复默认目标高度。

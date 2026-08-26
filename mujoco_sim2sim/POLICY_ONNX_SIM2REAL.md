@@ -20,6 +20,7 @@ mujoco_sim2sim/scripts/export_policy_onnx.py
 ```powershell
 D:\condaenvs\isaacsim510\python.exe .\mujoco_sim2sim\scripts\export_policy_onnx.py `
   --checkpoint .\isaaclab_ext\logs\rsl_rl\infantry_2027_v0_flat\2026-08-24_00-53-14_long_v1_direct_yaw\model_5000.pt `
+  --action-contract infantry-2027-v0-vmc-action-v1 `
   --output .\mujoco_sim2sim\exported\model_5000.onnx
 ```
 
@@ -32,7 +33,7 @@ model_5000.onnx.json     checkpoint/ONNX SHA-256、I/O 和验证结果
 model_5000.golden.json   固定跨平台测试向量
 ```
 
-ONNX 内嵌 checkpoint SHA-256、迭代数、policy contract、坐标系和 I/O 描述。
+ONNX 内嵌 checkpoint SHA-256、迭代数、policy/action contract、平衡摆角表、坐标系和 I/O 描述。
 部署时应校验 manifest 中的哈希，禁止仅凭文件名判断 policy 版本。
 
 ## 2. ONNX 图的精确接口
@@ -263,10 +264,10 @@ raw[i] = clip(actions[i], -100, 100)
 
 | 索引 | 含义 | 解码公式 | 正方向 |
 |---:|---|---|---|
-| 0 | 左腿绝对腿角目标 | `theta_L* = 0.5 * raw[0]` | 正值使轮心相对髋关节向后 |
+| 0 | 左腿腿角目标 | `theta_L* = 0.5 * raw[0] + equilibrium(L_L*)` | 正值使轮心相对髋关节向后 |
 | 1 | 左腿长度残差 | 见下式 | 正值加长 |
 | 2 | 左轮归一化轮速 | `omega_L_norm = clip(20*raw[2],-55,55)` | 正值前进 |
-| 3 | 右腿绝对腿角目标 | `theta_R* = 0.5 * raw[3]` | 正值使轮心相对髋关节向后 |
+| 3 | 右腿腿角目标 | `theta_R* = 0.5 * raw[3] + equilibrium(L_R*)` | 正值使轮心相对髋关节向后 |
 | 4 | 右腿长度残差 | 见下式 | 正值加长 |
 | 5 | 右轮归一化轮速 | `omega_R_norm = clip(20*raw[5],-55,55)` | 正值前进 |
 
@@ -279,6 +280,16 @@ L_R* = clip(command_base_height + 0.012 + 0.03*tanh(raw[4]), 0.16, 0.33)
 
 所以腿长 action 的物理范围是 nominal length 上下 0.03 m，使用 `tanh` 饱和。
 `command_base_height + 0.012` 是名义腿长；base-height 命令本身不是最终腿长。
+
+Stable-v2 对解码后的左右目标腿长分别做线性插值，并把平衡摆角偏置加到对应目标：
+
+```text
+length nodes: [0.16, 0.22, 0.28, 0.33] m
+angle nodes:  [0.0,  0.0, -0.005, -0.005] rad
+```
+
+旧 v0 checkpoint 没有这项偏置。部署产物必须携带明确的 action contract，不能仅凭
+网络形状判断应采用哪一种解码。
 
 腿角以竖直向下为 0：
 
@@ -388,9 +399,8 @@ base_link height:       [0.148,0.318] m
 base height 是世界系中 base_link 原点的 Z 目标，不是底盘离地间隙、IMU 高度或
 腿长。
 
-现有 MuJoCo `runtime.py` 仍默认加载旧 `model_1600.npz`，并将 yaw 输入限制在
-`+/-3 rad/s`。使用 `model_5000.onnx` 对接实机时必须显式选择新模型；完整的
-`+/-4` 和 `+/-10 rad/s` 包络仍需先补做 sim2sim/HIL 验收。
+MuJoCo `runtime.py` 根据 `abs(vx) < 0.15 m/s` 区分原地转向与运动转向，并分别限制为
+`+/-10 rad/s` 和 `+/-4 rad/s`。高转速命令仍应逐级完成 sim2sim/HIL 验收后再用于实机。
 
 ## 10. MCU 侧参考伪代码
 

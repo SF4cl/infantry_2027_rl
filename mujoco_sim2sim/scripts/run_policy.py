@@ -116,8 +116,8 @@ def main() -> None:
     parser.add_argument("--keyboard", action="store_true")
     parser.add_argument("--forward-speed", type=float, default=2.3)
     parser.add_argument("--yaw-acceleration", type=float, default=10.0)
-    parser.add_argument("--moving-yaw-limit", type=float, default=3.0)
-    parser.add_argument("--point-yaw-limit", type=float, default=3.0)
+    parser.add_argument("--moving-yaw-limit", type=float, default=4.0)
+    parser.add_argument("--point-yaw-limit", type=float, default=10.0)
     parser.add_argument("--base-height", type=float, default=0.233)
     parser.add_argument("--height-step", type=float, default=0.02)
     parser.add_argument("--kp-length", type=float, default=900.0)
@@ -136,8 +136,10 @@ def main() -> None:
         parser.error("--forward-speed must be in (0, 2.3]")
     if args.yaw_acceleration <= 0.0:
         parser.error("--yaw-acceleration must be positive")
-    if not 0.0 < args.moving_yaw_limit <= args.point_yaw_limit <= 3.0:
-        parser.error("yaw limits must satisfy 0 < moving <= point <= 3 rad/s")
+    if not 0.0 < args.moving_yaw_limit <= 4.0:
+        parser.error("--moving-yaw-limit must be in (0, 4] rad/s")
+    if not args.moving_yaw_limit <= args.point_yaw_limit <= 10.0:
+        parser.error("--point-yaw-limit must be in [moving-yaw-limit, 10] rad/s")
     if not 0.148 <= args.base_height <= 0.318 or args.height_step <= 0.0:
         parser.error("invalid base-height or height-step")
     if args.report_interval < 0.0:

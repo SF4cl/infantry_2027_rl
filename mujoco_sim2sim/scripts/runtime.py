@@ -11,7 +11,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-from policy import FRAME_DIM, HISTORY_LENGTH, NumpyPolicy, decode_action
+from policy import FRAME_DIM, HISTORY_LENGTH, NumpyPolicy
 from vmc import PHI1_OFFSET, PHI4_OFFSET, state, wrap
 
 
@@ -82,7 +82,7 @@ class Runtime:
         self.command = np.array((0.0, 0.0, initial_height), dtype=np.float64)
         self.raw_action = np.zeros(6)
         self.latent = np.zeros(3)
-        self.targets = decode_action(self.raw_action, initial_height)
+        self.targets = self.policy.decode_action(self.raw_action, initial_height)
         self.leg_length = np.zeros(2)
         self.leg_angle = np.zeros(2)
         self.leg_rate = np.zeros((2, 2))
@@ -147,7 +147,7 @@ class Runtime:
         self.command[:] = (0.0, 0.0, height)
         self.raw_action[:] = 0.0
         self.latent[:] = 0.0
-        self.targets = decode_action(self.raw_action, height)
+        self.targets = self.policy.decode_action(self.raw_action, height)
         self._update_leg_state()
         self.history[:] = self.observation_frame()
 
@@ -155,7 +155,12 @@ class Runtime:
         value = np.asarray(command, dtype=np.float64)
         if value.shape != (3,) or not np.isfinite(value).all():
             raise ValueError("Command must be finite [vx, yaw_rate, base_height]")
-        if not (-2.3 <= value[0] <= 2.3 and -3.0 <= value[1] <= 3.0 and 0.148 <= value[2] <= 0.318):
+        yaw_limit = 10.0 if abs(value[0]) < 0.15 else 4.0
+        if not (
+            -2.3 <= value[0] <= 2.3
+            and -yaw_limit <= value[1] <= yaw_limit
+            and 0.148 <= value[2] <= 0.318
+        ):
             raise ValueError(f"Command outside the exported policy command envelope: {value}")
         self.command[:] = value
 
@@ -220,7 +225,7 @@ class Runtime:
     def step(self) -> dict:
         self.latent[:], action = self.policy.infer(self.history.reshape(-1))
         self.raw_action[:] = np.clip(action, -100.0, 100.0)
-        self.targets = decode_action(self.raw_action, float(self.command[2]))
+        self.targets = self.policy.decode_action(self.raw_action, float(self.command[2]))
         inner_efforts = []
         for _ in range(5):
             self._control()
