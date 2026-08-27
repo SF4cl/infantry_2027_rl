@@ -114,3 +114,12 @@ class Infantry2027TerrainStablePPORunnerCfg(Infantry2027FlatStablePPORunnerCfg):
     experiment_name = "infantry_2027_v2_terrain_stable"
     max_iterations = 5000
     save_interval = 20
+
+
+@configclass
+class Infantry2027JointTerrainPPORunnerCfg(Infantry2027FlatCompatiblePPORunnerCfg):
+    """From-scratch direct-joint mixed-terrain run."""
+
+    experiment_name = "infantry_2027_v3_joint_terrain"
+    max_iterations = 10000
+    save_interval = 20

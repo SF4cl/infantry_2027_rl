@@ -152,3 +152,31 @@ gym.register(
         ),
     },
 )
+
+gym.register(
+    id="Infantry-2027-Joint-Terrain-v3",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.infantry_2027_v3_env_cfg:Infantry2027JointTerrainEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:Infantry2027JointTerrainPPORunnerCfg"
+        ),
+    },
+)
+
+gym.register(
+    id="Infantry-2027-Joint-Terrain-Play-v3",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.infantry_2027_v3_env_cfg:Infantry2027JointTerrainPlayEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:Infantry2027JointTerrainPPORunnerCfg"
+        ),
+    },
+)

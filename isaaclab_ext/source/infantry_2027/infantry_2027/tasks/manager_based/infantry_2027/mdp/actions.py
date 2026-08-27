@@ -1,4 +1,4 @@
-"""Closed-chain VMC plus wheel velocity action."""
+"""Closed-chain VMC and direct joint-PD wheel-legged actions."""
 
 from __future__ import annotations
 
@@ -201,3 +201,82 @@ class VmcWheelActionCfg(ActionTermCfg):
     # contract.  v1 enables the independently measured MuJoCo table.
     equilibrium_length_nodes: tuple[float, ...] = ()
     equilibrium_angle_nodes: tuple[float, ...] = ()
+
+
+class JointPdWheelAction(VmcWheelAction):
+    """Fudan-compatible motor action without VMC force control.
+
+    The six policy values retain Fudan's physical order::
+
+        [left_front, left_rear, left_wheel,
+         right_front, right_rear, right_wheel]
+
+    Leg values are position residuals about the randomized default joint
+    positions.  Wheel values are joint-axis velocity targets.  The five-bar
+    solver inherited from :class:`VmcWheelAction` is used only to measure the
+    physical leg swing angles for the reference ``nominal_state`` reward; it
+    never participates in the torque command.
+    """
+
+    cfg: "JointPdWheelActionCfg"
+
+    def _decode_delayed_action(self) -> None:
+        self._fifo[:, 1:].copy_(self._fifo[:, :-1].clone())
+        self._fifo[:, 0].copy_(self._raw_actions)
+        ids = torch.arange(self.num_envs, device=self.device)
+        action = self._fifo[ids, self.action_delay_steps]
+
+        leg_action = action[:, (0, 1, 3, 4)]
+        default_leg_pos = self._asset.data.default_joint_pos[:, self._leg_ids]
+        self._processed_actions[:, (0, 1, 3, 4)] = (
+            default_leg_pos + leg_action * self.cfg.position_scale
+        )
+        self._processed_actions[:, (2, 5)] = (
+            action[:, (2, 5)] * self.cfg.wheel_velocity_scale
+        ).clamp(-self.cfg.wheel_velocity_limit, self.cfg.wheel_velocity_limit)
+
+    def apply_actions(self) -> None:
+        self._decode_delayed_action()
+
+        leg_target = self._processed_actions[:, (0, 1, 3, 4)]
+        leg_pos = self._asset.data.joint_pos[:, self._leg_ids]
+        leg_vel = self._asset.data.joint_vel[:, self._leg_ids]
+        leg_effort = (
+            self.cfg.leg_kp * self.kp_scale * (leg_target - leg_pos)
+            - self.cfg.leg_kd * self.kd_scale * leg_vel
+        ) * self.motor_scale
+        leg_effort.clamp_(-self.cfg.leg_effort_limit, self.cfg.leg_effort_limit)
+
+        wheel_target = self._processed_actions[:, (2, 5)]
+        wheel_vel = self._asset.data.joint_vel[:, self._wheel_ids]
+        wheel_effort = (
+            self.cfg.wheel_kd * self.kd_scale * (wheel_target - wheel_vel)
+        ) * self.motor_scale
+        wheel_effort.clamp_(-self.cfg.wheel_effort_limit, self.cfg.wheel_effort_limit)
+
+        self.last_leg_effort.copy_(torch.nan_to_num(leg_effort))
+        self.last_wheel_effort.copy_(torch.nan_to_num(wheel_effort))
+        self._asset.set_joint_effort_target(self.last_leg_effort, joint_ids=self._leg_ids)
+        self._asset.set_joint_effort_target(self.last_wheel_effort, joint_ids=self._wheel_ids)
+
+
+@configclass
+class JointPdWheelActionCfg(ActionTermCfg):
+    """Direct motor-PD parameters from Fudan's final terrain snapshot."""
+
+    class_type: type = JointPdWheelAction
+    asset_name: str = MISSING
+    position_scale: float = 0.5
+    wheel_velocity_scale: float = 10.0
+    wheel_velocity_limit: float = 60.0
+    policy_action_clip: float = 100.0
+    leg_kp: float = 60.0
+    leg_kd: float = 1.0
+    wheel_kd: float = 0.2
+    leg_effort_limit: float = 45.0
+    wheel_effort_limit: float = 5.0
+    max_action_delay_steps: int = 5
+    action_delay_steps_range: tuple[int, int] = (0, 5)
+    kp_scale_range: tuple[float, float] = (0.9, 1.1)
+    kd_scale_range: tuple[float, float] = (0.9, 1.1)
+    motor_scale_range: tuple[float, float] = (0.9, 1.1)

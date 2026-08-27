@@ -9,14 +9,18 @@ from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import RayCaster
 
-from .actions import VmcWheelAction
+from .actions import JointPdWheelAction, VmcWheelAction
 
 
-def _action(env: ManagerBasedRLEnv) -> VmcWheelAction:
-    term = env.action_manager.get_term("vmc")
-    if not isinstance(term, VmcWheelAction):
-        raise TypeError("The 'vmc' action term has the wrong type.")
-    return term
+def _action(env: ManagerBasedRLEnv) -> VmcWheelAction | JointPdWheelAction:
+    """Return either preserved VMC or v3 direct-joint action contract."""
+    for name in ("vmc", "joint_pd"):
+        if name in env.action_manager.active_terms:
+            term = env.action_manager.get_term(name)
+            if isinstance(term, (VmcWheelAction, JointPdWheelAction)):
+                return term
+            raise TypeError(f"The '{name}' action term has the wrong type.")
+    raise KeyError("Expected an action term named 'vmc' or 'joint_pd'.")
 
 
 def proprioception(

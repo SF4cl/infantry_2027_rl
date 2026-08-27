@@ -1,5 +1,9 @@
 # infantry_2027_rl
 
+新的直接关节电机、混合地形从零训练入口见
+[DIRECT_JOINT_TERRAIN_V3.md](DIRECT_JOINT_TERRAIN_V3.md)。v3 最终前后速度为
+`±2.5 m/s`，暂不包含倒地起身训练；旧 VMC 版本与 checkpoint 保留不动。
+
 基于高保真 `infantry_2027_v0` 闭链资产的 Isaac Lab 训练与 MuJoCo sim2sim 根目录。
 
 ## 目录

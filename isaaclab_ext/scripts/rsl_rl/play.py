@@ -36,7 +36,7 @@ parser.add_argument(
 )
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--keyboard", action="store_true", help="Control final-range commands from the keyboard.")
-parser.add_argument("--forward-speed", type=float, default=2.3, help="Held-key forward/backward target in m/s.")
+parser.add_argument("--forward-speed", type=float, default=2.5, help="Held-key forward/backward target in m/s.")
 parser.add_argument("--yaw-acceleration", type=float, default=10.0, help="Held-key yaw command ramp in rad/s^2.")
 parser.add_argument("--moving-yaw-limit", type=float, default=4.0, help="Yaw limit while translating in rad/s.")
 parser.add_argument("--point-yaw-limit", type=float, default=10.0, help="Yaw limit while point-turning in rad/s.")
@@ -77,8 +77,8 @@ AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 if args_cli.keyboard and args_cli.headless:
     parser.error("--keyboard requires the graphical viewport; remove --headless.")
-if args_cli.forward_speed <= 0.0 or args_cli.forward_speed > 2.3:
-    parser.error("--forward-speed must be in (0, 2.3].")
+if args_cli.forward_speed <= 0.0 or args_cli.forward_speed > 2.5:
+    parser.error("--forward-speed must be in (0, 2.5].")
 if args_cli.yaw_acceleration <= 0.0:
     parser.error("--yaw-acceleration must be positive.")
 if not 0.0 < args_cli.moving_yaw_limit <= 4.0:
@@ -404,10 +404,18 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         command_term = env.unwrapped.command_manager.get_term("motion")
         if not hasattr(command_term, "set_manual_command"):
             raise TypeError("The motion command term does not support direct-yaw keyboard control.")
+        task_forward_limit = command_term.cfg.ranges.forward_max
+        keyboard_forward_speed = min(args_cli.forward_speed, task_forward_limit)
+        if keyboard_forward_speed < args_cli.forward_speed:
+            print(
+                f"[INFO] Clamping keyboard speed from {args_cli.forward_speed:.2f} to this task's "
+                f"{task_forward_limit:.2f} m/s limit.",
+                flush=True,
+            )
         keyboard = KeyboardYawHeightCommand(
             device=env.unwrapped.device,
             num_envs=env.num_envs,
-            forward_speed=args_cli.forward_speed,
+            forward_speed=keyboard_forward_speed,
             yaw_acceleration=args_cli.yaw_acceleration,
             moving_yaw_limit=args_cli.moving_yaw_limit,
             point_yaw_limit=args_cli.point_yaw_limit,

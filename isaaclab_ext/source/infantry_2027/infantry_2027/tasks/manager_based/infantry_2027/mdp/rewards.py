@@ -10,7 +10,7 @@ from isaaclab.envs.mdp import rewards as base_rewards
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 
-from .actions import VmcWheelAction
+from .actions import JointPdWheelAction, VmcWheelAction
 from .observations import local_base_height
 
 
@@ -75,7 +75,7 @@ def wheel_air_leg_angle(
     threshold: float = 1.0,
 ) -> torch.Tensor:
     """Encourage a neutral VMC swing angle only while a wheel is airborne."""
-    term: VmcWheelAction = env.action_manager.get_term("vmc")
+    term: VmcWheelAction | JointPdWheelAction = _action_term(env)
     term.update_leg_state()
     sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
     forces = sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
@@ -85,7 +85,7 @@ def wheel_air_leg_angle(
 
 
 def nominal_state(env: ManagerBasedRLEnv, maximum: float = 1.0) -> torch.Tensor:
-    term: VmcWheelAction = env.action_manager.get_term("vmc")
+    term: VmcWheelAction | JointPdWheelAction = _action_term(env)
     term.update_leg_state()
     return _finite((term.leg_angle[:, 0] - term.leg_angle[:, 1]).square(), maximum)
 
@@ -116,7 +116,7 @@ def dof_acc(
 
 
 def torques(env: ManagerBasedRLEnv, maximum: float = 10_000.0) -> torch.Tensor:
-    term: VmcWheelAction = env.action_manager.get_term("vmc")
+    term: VmcWheelAction | JointPdWheelAction = _action_term(env)
     value = term.last_leg_effort.square().sum(dim=-1) + term.last_wheel_effort.square().sum(dim=-1)
     return _finite(value, maximum)
 
@@ -126,7 +126,7 @@ def action_rate(env: ManagerBasedRLEnv, maximum: float = 100.0) -> torch.Tensor:
 
 
 def action_smooth(env: ManagerBasedRLEnv, maximum: float = 100.0) -> torch.Tensor:
-    term: VmcWheelAction = env.action_manager.get_term("vmc")
+    term: VmcWheelAction | JointPdWheelAction = _action_term(env)
     return _finite(
         term.action_second_difference[:, (0, 1, 3, 4)].square().sum(dim=-1), maximum
     )
@@ -147,3 +147,13 @@ def non_finite_state(env: ManagerBasedRLEnv) -> torch.Tensor:
         & torch.isfinite(robot.data.joint_pos).all(dim=-1)
         & torch.isfinite(robot.data.joint_vel).all(dim=-1)
     )
+
+
+def _action_term(env: ManagerBasedRLEnv) -> VmcWheelAction | JointPdWheelAction:
+    for name in ("vmc", "joint_pd"):
+        if name in env.action_manager.active_terms:
+            term = env.action_manager.get_term(name)
+            if isinstance(term, (VmcWheelAction, JointPdWheelAction)):
+                return term
+            raise TypeError(f"The '{name}' action term has the wrong type.")
+    raise KeyError("Expected an action term named 'vmc' or 'joint_pd'.")
