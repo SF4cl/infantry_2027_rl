@@ -27,6 +27,11 @@ parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument(
+    "--free-camera",
+    action="store_true",
+    help="Disable the default robot-following viewport camera.",
+)
+parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
@@ -173,6 +178,8 @@ class KeyboardYawHeightCommand:
         point_yaw_limit: float,
         base_height: float,
         height_step: float,
+        minimum_base_height: float,
+        maximum_base_height: float,
     ):
         # The headless Kit experience does not provide omni.appwindow.  Import
         # it only when keyboard control is actually requested.
@@ -188,6 +195,8 @@ class KeyboardYawHeightCommand:
         self.base_height = base_height
         self.initial_base_height = base_height
         self.height_step = height_step
+        self.minimum_base_height = minimum_base_height
+        self.maximum_base_height = maximum_base_height
         self._pressed: set[str] = set()
         self._report_pending = True
         self._input = carb.input.acquire_input_interface()
@@ -215,10 +224,14 @@ class KeyboardYawHeightCommand:
                 self.base_height = self.initial_base_height
                 handled = True
             elif key in self._HEIGHT_UP_KEYS:
-                self.base_height = min(0.318, self.base_height + self.height_step)
+                self.base_height = min(
+                    self.maximum_base_height, self.base_height + self.height_step
+                )
                 handled = True
             elif key in self._HEIGHT_DOWN_KEYS:
-                self.base_height = max(0.148, self.base_height - self.height_step)
+                self.base_height = max(
+                    self.minimum_base_height, self.base_height - self.height_step
+                )
                 handled = True
             elif key in self._MOTION_KEYS:
                 self._pressed.add(key)
@@ -284,6 +297,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # note: certain randomizations occur in the environment initialization so we set the seed here
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+    if not args_cli.free_camera:
+        # Keep environment zero's robot centered while retaining a stable
+        # world-aligned view.  ``asset_root`` follows translation only, so
+        # chassis pitch/roll does not shake or rotate the viewport camera.
+        env_cfg.viewer.origin_type = "asset_root"
+        env_cfg.viewer.env_index = 0
+        env_cfg.viewer.asset_name = "robot"
+        env_cfg.viewer.eye = (1.4, 1.4, 0.60)
+        env_cfg.viewer.lookat = (0.0, 0.0, 0.0)
     if args_cli.keyboard:
         # Manual commands must not be replaced by the periodic sampler or a
         # time-limit reset while the user is testing a checkpoint.
@@ -412,15 +434,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 f"{task_forward_limit:.2f} m/s limit.",
                 flush=True,
             )
+        keyboard_moving_yaw_limit = min(
+            args_cli.moving_yaw_limit, command_term.cfg.moving_yaw_rate_limit
+        )
+        keyboard_point_yaw_limit = min(
+            args_cli.point_yaw_limit, command_term.cfg.point_yaw_rate_limit
+        )
+        minimum_base_height, maximum_base_height = command_term.cfg.ranges.base_height
+        keyboard_base_height = min(
+            maximum_base_height, max(minimum_base_height, args_cli.base_height)
+        )
         keyboard = KeyboardYawHeightCommand(
             device=env.unwrapped.device,
             num_envs=env.num_envs,
             forward_speed=keyboard_forward_speed,
             yaw_acceleration=args_cli.yaw_acceleration,
-            moving_yaw_limit=args_cli.moving_yaw_limit,
-            point_yaw_limit=args_cli.point_yaw_limit,
-            base_height=args_cli.base_height,
+            moving_yaw_limit=keyboard_moving_yaw_limit,
+            point_yaw_limit=keyboard_point_yaw_limit,
+            base_height=keyboard_base_height,
             height_step=args_cli.height_step,
+            minimum_base_height=minimum_base_height,
+            maximum_base_height=maximum_base_height,
         )
         print("[INFO] Keyboard control enabled. Click the viewport once, then hold:", flush=True)
         print("       I / K : forward / backward", flush=True)

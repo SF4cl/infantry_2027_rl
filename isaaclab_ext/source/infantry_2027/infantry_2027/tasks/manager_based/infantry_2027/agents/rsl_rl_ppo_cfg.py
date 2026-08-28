@@ -123,3 +123,24 @@ class Infantry2027JointTerrainPPORunnerCfg(Infantry2027FlatCompatiblePPORunnerCf
     experiment_name = "infantry_2027_v3_joint_terrain"
     max_iterations = 10000
     save_interval = 20
+
+
+@configclass
+class Infantry2027JointFudanTerrainPPORunnerCfg(Infantry2027FlatCompatiblePPORunnerCfg):
+    """PPO settings from Fudan's final 50/20/10/10/10 terrain snapshot."""
+
+    experiment_name = "infantry_2027_v4_joint_fudan_terrain"
+    max_iterations = 50000
+    save_interval = 100
+    policy = EstimatorActorCriticCfg(
+        init_noise_std=1.0,
+        actor_obs_normalization=False,
+        critic_obs_normalization=False,
+        actor_hidden_dims=[128, 64, 32],
+        critic_hidden_dims=[256, 128, 64],
+        encoder_hidden_dims=[128, 64],
+        history_length=5,
+        single_frame_dim=25,
+        latent_dim=3,
+        activation="elu",
+    )
